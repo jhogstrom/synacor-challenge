@@ -1,0 +1,5 @@
+*.state
+arch-spec
+challenge.bin
+cpu2.py
+debug*.txt
