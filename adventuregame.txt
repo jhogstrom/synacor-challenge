@@ -55,5 +55,5 @@ take strange book
 look strange book
 .setreg 7 1
 .debugmode on
-.run 15000
+.run 100000
 use teleporter

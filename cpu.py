@@ -127,8 +127,9 @@ class CPU():
     def output(self):
         a = self.getnext()
         c = chr(self.dereference(a))
-        self.debug(f"-> [{c}]")
-        print(c, end="")
+        self.debug(f"-> [{c}]", end="")
+        if not self.debugmode:
+            print(c, end="")
 
     def noop(self):
         pass
@@ -147,7 +148,7 @@ class CPU():
     def pop(self):
         a = self.getnext()
         stack = self.stack.pop()
-        self.debug(f"(a={a}) <= {stack}")
+        self.debug(f"(a={a}) <= {stack}", end="")
         self.write(a, stack)
 
     def eq(self):
@@ -227,7 +228,7 @@ class CPU():
         b = self.getnext()
         c = self.getnext()
         self.debugparams(a=a, b=b, c=c)
-        self.debug(f"== {self.dereference(b):b} | {self.dereference(c):b} = {self.dereference(b) | self.dereference(c)}")
+        # self.debug(f"== {self.dereference(b):b} | {self.dereference(c):b} = {self.dereference(b) | self.dereference(c)}")
         self.write(a, self.dereference(b) | self.dereference(c))
 
     def op_not(self):
@@ -235,7 +236,7 @@ class CPU():
         b = self.getnext()
         self.debugparams(a=a, b=b)
         b = self.dereference(b)
-        self.debug(f"== {b:b} -> {~b & 0b0111_1111_1111_1111:b} == {~b & 0b0111_1111_1111_1111}")
+        # self.debug(f"== {b:b} -> {~b & 0b0111_1111_1111_1111:b} == {~b & 0b0111_1111_1111_1111}")
         self.write(a, ~b & 0b0111_1111_1111_1111)
 
     def rmem(self):
@@ -304,6 +305,7 @@ class CPU():
         self.command = ""
         self.commands = []
         self.debugger = None
+        self.dbglen = 0
         self.ops = {
             0: self.halt,
             1: self.setreg,
@@ -336,17 +338,25 @@ class CPU():
             end: str = "\n") -> None:
         if force or self.debugmode:
             print(s, end=end)
+        if end == '\n':
+            self.dbglen = 0
+        else:
+            self.dbglen += len(s)
 
     def debugparams(self, **args):
         if self.debugmode:
             arg_s = []
             for a, v in args.items():
-                s = f"{a}={v}"
+                if v & (1 << 15):
+                    s = f"{a}=(r{v & 0xFF})"
+
+                else:
+                    s = f"{a}={v}"
                 if v & (1 << 15):
                     s += f"->{self.dereference(v)}"
                 arg_s.append(s)
 
-            self.debug(f"({', '.join(arg_s)})")
+            self.debug(f"({', '.join(arg_s)})", end="")
 
     def write(self, addr, value):
         v1 = value & 0x00FF
@@ -381,7 +391,15 @@ class CPU():
 
             self.debug(f"[{str(self.pc-1).zfill(5)}] {self.ops[instruction].__name__}", end="")
             self.ops[instruction]()
-            self.debug(f"        {self.regs}")
+            if self.debugmode:
+                ADJUST_COL = 70
+                self.debug(" " * (ADJUST_COL-self.dbglen), end="")
+                s = "{"
+                regs = [f"{k}: {v:5}" for k, v in self.regs.items()]
+                s += ", ".join(regs)
+                s += f"}} (stack: {len(self.stack)})"
+                self.debug(s)
+                # self.debug(f"{self.regs}")
 
     def run(self):
         while (not self.halted) and (self.pc < len(self.memory)):
@@ -391,6 +409,10 @@ class CPU():
                 # print("Remaining:", self.steps)
             if self.pc in self.breakpoints or self.steps == 0:
                 self.paused = True
+                if self.pc in self.breakpoints:
+                    print(f"Hit breakpoint {self.pc}.")
+                if self.steps == 0:
+                    print("Executed all steps.")
             if self.paused:
                 cmd = input("dbg <no '.'>: ")
                 self.debugger.command(cpu, cmd)
@@ -445,7 +467,7 @@ debugger = Debugger()
 cpu.debugger = debugger
 load_state(cpu, "startgame.state")
 # cpu.debugmode = True
-cpu.breakpoints.append(6048)
+# cpu.breakpoints.append(6048)
 # strings(cpu)
 cpu.run()
 pprint(cpu.stats)

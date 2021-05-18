@@ -30,3 +30,38 @@ This is where you need a more powerful debugger. To me this is the hardest probl
 * Set a register to a teleporter-friendly value.
 * Disassemble the validation code to understand what a 'teleporter-friendly value' is.
 * Patch the binary to skip the validation.
+
+## Debugger
+```
+? <dbg-commands start with '.'>.help
+Available commands:
+quit            quit the program
+strings         Display strings in the binary file
+solve_coins             Solve the coin equation.
+save            Save cpu state to <filename>.
+regs            Print registers.
+setreg          Set register <n> to <v>.
+loadcmd         Load adventure commands.
+debugmode               Set debugmode ON or OFF.
+step            Run in step mode
+run             Run <n> steps (1 default)
+continue                Run (to next bp or input).
+printcommands           Print commands
+```
+
+So I built a debugger, with a fairly easy mechanism to plug in new commands. This is totally over-engineered, and the reason for that is that I have no real idea what to do next.
+
+My game plan is as follows:
+* Run the game to where I have the teleporter (either by restoring state or playing is using the canned script).
+* Set reg 8 to some random value
+* Turn on debug output
+* Run a few thousand instructions
+* Find loops and try to convert the assembler to something comprehensible :)
+
+I believe there are take-off/landing zones with `noop` that I can patch and jump to/from - once I have figured out what the correct value of reg 8 is.
+
+When I added a [`.strings`](https://linux.die.net/man/1/strings) command I thought maybe it'd be simple to extract all text in the game. However, that is not exactly the case, as most of the text is encrypted.
+
+I believe it might be simpler to crack the text encryption assembler, and extract all text to see the codes.
+
+Another idea is to disassemble the whole thing and try to trace code...
